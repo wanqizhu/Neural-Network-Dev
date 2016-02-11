@@ -29,31 +29,31 @@ def load_model(filename='okapi_model.pk'):
     return model
 
 
-def make_batches(X, y, batch_size=128, shuffle=True, nest=True):
-    for i in range(len(X)):
-        X[i] = atleast_4d(X[i])
+def make_batches(x, y, batch_size=128, shuffle=True, nest=True):
+    for i in range(len(x)):
+        x[i] = atleast_4d(x[i])
     y = atleast_4d(y)
     num_batches = (y.shape[0] // batch_size)
     if y.shape[0] % batch_size is not 0:
         num_batches += 1
     if shuffle:
-        shuffled_arrays = sk.utils.shuffle(*X, y)
-        X = shuffled_arrays[:len(X)]
+        shuffled_arrays = sk.utils.shuffle(*x, y)
+        x = shuffled_arrays[:len(x)]
         y = shuffled_arrays[-1]
-    X_batches_list = []
-    for i in range(len(X)):
-        X_batches_list.append(np.array_split(X[i], num_batches))
+    x_batches_list = []
+    for i in range(len(x)):
+        x_batches_list.append(np.array_split(x[i], num_batches))
     if nest:
-        X_batches = []
+        x_batches = []
         for i in range(num_batches):
-            X_batch = []
-            for X_input in X_batches_list:
-                X_batch.append(X_input[i])
-            X_batches.append(X_batch)
+            x_batch = []
+            for x_input in x_batches_list:
+                x_batch.append(x_input[i])
+            x_batches.append(x_batch)
     else:
-        X_batches = X_batches_list
+        x_batches = x_batches_list
     y_batches = np.array_split(y, num_batches)
-    return X_batches, y_batches, num_batches
+    return x_batches, y_batches, num_batches
 
 
 class Branch():
@@ -144,10 +144,10 @@ class Branch():
             elif self.merge_mode is not 'flat_append':
                 raise Exception('Invalid merge mode')
         if len(inputs) > 1 and self.merge_mode is 'flat_append':
-            X = T.concatenate(inputs, axis=1)
+            x = T.concatenate(inputs, axis=1)
         else:
-            X = inputs[0]
-        current_layer = X
+            x = inputs[0]
+        current_layer = x
         for layer, params in zip(self.layers, branch_params):
             current_layer = layer.get_output(current_layer, params, testing)
         output = current_layer.astype('float32')
@@ -240,7 +240,7 @@ class Model():
     def set_tree(self, tree):
         self.tree = tree
 
-    def compile(self, X_train, y_train, initialize_params=True):
+    def compile(self, x_train, y_train, initialize_params=True):
         print('Compiling model...')
         self.compiled = True
         try:
@@ -248,8 +248,8 @@ class Model():
         except:
             self.num_output_dims = y_train.ndim
         y_train = atleast_4d(y_train)
-        for i in range(len(X_train)):
-            X_train[i] = atleast_4d(X_train[i])
+        for i in range(len(x_train)):
+            x_train[i] = atleast_4d(x_train[i])
         self.tree.set_final_output_shape(y_train.shape)
         if initialize_params:
             self.initialize_params()
@@ -293,42 +293,42 @@ class Model():
             outputs=train_loss,
             updates=updates)
 
-    def predict(self, X):
-        for i in range(len(X)):
-            X[i] = atleast_4d(X[i])
-        preds_theano = self.predict_theano(*X)
+    def predict(self, x):
+        for i in range(len(x)):
+            x[i] = atleast_4d(x[i])
+        preds_theano = self.predict_theano(*x)
         preds = []
         for dim in [output.shape for output in self.outputs]:
             preds.append(preds_theano[:sum(dim)])
         return preds
 
-    def get_train_loss(self, X, y):
-        for i in range(len(X)):
-            X[i] = atleast_4d(X[i])
+    def get_train_loss(self, x, y):
+        for i in range(len(x)):
+            x[i] = atleast_4d(x[i])
         y = atleast_4d(y)
-        return self.train_loss_theano(*X, y)
+        return self.train_loss_theano(*x, y)
 
-    def get_test_loss(self, X, y):
-        for i in range(len(X)):
-            X[i] = atleast_4d(X[i])
+    def get_test_loss(self, x, y):
+        for i in range(len(x)):
+            x[i] = atleast_4d(x[i])
         y = atleast_4d(y)
-        return self.test_loss_theano(*X, y)
+        return self.test_loss_theano(*x, y)
 
-    def get_accuracy(self, X, y, batch_size=128, shuffle=True):
-        for i in range(len(X)):
-            X[i] = atleast_4d(X[i])
+    def get_accuracy(self, x, y, batch_size=128, shuffle=True):
+        for i in range(len(x)):
+            x[i] = atleast_4d(x[i])
         y = atleast_4d(y)
-        X_batches, y_batches, num_batches = make_batches(
-            X, y, batch_size, shuffle=shuffle)
+        x_batches, y_batches, num_batches = make_batches(
+            x, y, batch_size, shuffle=shuffle)
         accuracy = 0
-        for X_batch, y_batch in zip(X_batches, y_batches):
-            accuracy += self.test_acc_theano(*X_batch, y_batch)
+        for x_batch, y_batch in zip(x_batches, y_batches):
+            accuracy += self.test_acc_theano(*x_batch, y_batch)
         return accuracy / num_batches * 100
 
-    def get_dream_accuracy(self, X, y, max_dream_length=24,
+    def get_dream_accuracy(self, x, y, max_dream_length=24,
             initializer=Initializers.zeros):
         y = atleast_4d(y)
-        preds = self.predict_dream(X, [y.shape[1:]], max_dream_length, initializer)
+        preds = self.predict_dream(x, [y.shape[1:]], max_dream_length, initializer)
         accuracy = self.dream_accuracy_theano(preds[0].astype('float32'), y)
         return accuracy * 100, preds
 
@@ -345,23 +345,23 @@ class Model():
         iterations_left = num_iterations - iteration - 1
         return last_time * iterations_left
 
-    def compile_dream(self, X_train, shapes, indices, initializer):
+    def compile_dream(self, x_train, shapes, indices, initializer):
         self.dream_compiled = True
-        self.X_dream = []
+        self.x_dream = []
         index = 0
-        for i in range(len(X_train)):
+        for i in range(len(x_train)):
             if i in indices:
-                self.X_dream.append(theano.shared(initializer(shapes[index]).astype('float32')))
+                self.x_dream.append(theano.shared(initializer(shapes[index]).astype('float32')))
                 index += 1
             else:
-                X_train[i] = atleast_4d(X_train[i][[0]])
-                self.X_dream.append(theano.shared(X_train[i].astype('float32')))
+                x_train[i] = atleast_4d(x_train[i][[0]])
+                self.x_dream.append(theano.shared(x_train[i].astype('float32')))
 
-        y_hat_test, layer_updates = self.tree.get_output(self.params_shared, self.X_dream[:], True)
+        y_hat_test, layer_updates = self.tree.get_output(self.params_shared, self.x_dream[:], True)
         preds = y_hat_test.flatten(self.num_output_dims).mean(axis=None)
 
-        self.dream_optimizer.build([self.X_dream[index] for index in indices])
-        updates = list(self.dream_optimizer.get_updates([self.X_dream[index] for index in indices], -preds))
+        self.dream_optimizer.build([self.x_dream[index] for index in indices])
+        updates = list(self.dream_optimizer.get_updates([self.x_dream[index] for index in indices], -preds))
         for i, update in enumerate(updates):
             updates[i] = (update[0], update[1].astype('float32'))
         updates += layer_updates
@@ -377,7 +377,7 @@ class Model():
             updates=updates
         )
 
-    def predict_dream(self, X_train, shapes, max_dream_length=24,
+    def predict_dream(self, x_train, shapes, max_dream_length=24,
             initializer=Initializers.zeros):
         for i, shape in enumerate(shapes):
             shape = list(shape)
@@ -385,15 +385,15 @@ class Model():
             shape = atleast_4d(np.zeros(tuple(shape))).shape
             shapes[i] = shape
         indices = []
-        for i in range(len(X_train)):
-            if X_train[i] is None:
+        for i in range(len(x_train)):
+            if x_train[i] is None:
                 indices.append(i)
         if not self.dream_compiled:
-            self.compile_dream(X_train[:], shapes, indices, initializer)
-        for i in range(len(X_train)):
+            self.compile_dream(x_train[:], shapes, indices, initializer)
+        for i in range(len(x_train)):
             if i not in indices:
-                X_train[i] = atleast_4d(X_train[i])
-                num_rows = X_train[i].shape[0]
+                x_train[i] = atleast_4d(x_train[i])
+                num_rows = x_train[i].shape[0]
         predictions = []
         for shape in shapes:
             prediction_shape = list(shape)
@@ -401,44 +401,44 @@ class Model():
             predictions.append(np.zeros(prediction_shape))
         for row in range(num_rows):
             index = 0
-            for i in range(len(X_train)):
+            for i in range(len(x_train)):
                 if i in indices:
-                    self.X_dream[i].set_value(
+                    self.x_dream[i].set_value(
                             atleast_4d(initializer(shapes[index])))
                     index += 1
                 else:
-                    self.X_dream[i].set_value(atleast_4d(X_train[i][[row]]))
+                    self.x_dream[i].set_value(atleast_4d(x_train[i][[row]]))
             for i in range(max_dream_length):
                 reward = self.dream_update()
             if (row + 1) % 1000 is 0:
-                print('{}/{}: {}'.format(row + 1, X_train[0].shape[0], reward))
+                print('{}/{}: {}'.format(row + 1, x_train[0].shape[0], reward))
             for pred_ind, index in enumerate(indices):
-                predictions[pred_ind][row, :, :, :] = self.X_dream[index].get_value()
+                predictions[pred_ind][row, :, :, :] = self.x_dream[index].get_value()
         return predictions
 
-    def train(self, X, y, num_epochs=12, shuffle=True,
+    def train(self, x, y, num_epochs=12, shuffle=True,
               params_filename='okapi_params.pk',
               initialize_params=True,
               batch_size=128):
         self.num_output_dims = y.ndim
-        for i in range(len(X)):
-            X[i] = atleast_4d(X[i])
+        for i in range(len(x)):
+            x[i] = atleast_4d(x[i])
         y = atleast_4d(y)
         if not self.compiled:
-            self.compile(X, y, initialize_params=initialize_params)
-        X_batches, y_batches, num_batches = make_batches(
-            X, y, batch_size, shuffle)
+            self.compile(x, y, initialize_params=initialize_params)
+        x_batches, y_batches, num_batches = make_batches(
+            x, y, batch_size, shuffle)
         print('Started training...')
         for epoch in range(num_epochs):
             epoch_start = time.clock()
             if shuffle:
-                X_batches, y_batches, num_batches = make_batches(
-                    X, y, batch_size, shuffle=True)
+                x_batches, y_batches, num_batches = make_batches(
+                    x, y, batch_size, shuffle=True)
             total_loss = 0
-            for X_batch, y_batch, batch_num in zip(
-                    X_batches, y_batches, range(num_batches)):
+            for x_batch, y_batch, batch_num in zip(
+                    x_batches, y_batches, range(num_batches)):
                 batch_start = time.clock()
-                loss = self.update_step(*X_batch, y_batch)
+                loss = self.update_step(*x_batch, y_batch)
                 total_loss += loss
                 batch_time = time.clock() - batch_start
                 time_rem = self.est_time_remaining(

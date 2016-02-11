@@ -8,6 +8,7 @@ import pickle
 import random
 
 
+# file-reading
 def get_file(filename, source, offset=16):
     download(filename, source)
     with gzip.open(filename, 'rb') as f:
@@ -28,17 +29,17 @@ def untar(filename):
 
 
 def vec_to_onehot(vec):
-    num_categories = len(np.unique(vec))
+    num_categories = len(np.unique(vec)) # number of unique values
     vec_placeholder = np.zeros((vec.shape[0], num_categories),
-                               dtype='float32')
+                               dtype='float32') #initialize array of dimension (vec.shape[0], num_categories)
     vec_placeholder[np.arange(vec.shape[0]), vec] = 1
     return vec_placeholder
 
 
-def get_val_set(X_train, y_train, val_size):
-    X_train, X_val = X_train[:-val_size], X_train[-val_size:]
+def get_val_set(x_train, y_train, val_size):
+    x_train, x_val = x_train[:-val_size], x_train[-val_size:]
     y_train, y_val = y_train[:-val_size], y_train[-val_size:]
-    return X_train, y_train, X_val, y_val
+    return x_train, y_train, x_val, y_val
 
 
 def load_mnist(val_size=10000):
@@ -53,15 +54,15 @@ def load_mnist(val_size=10000):
     def load_mnist_labels(filename):
         return get_file(filename, source, offset=8)
 
-    X_train = load_mnist_images('train-images-idx3-ubyte.gz')
+    x_train = load_mnist_images('train-images-idx3-ubyte.gz')
     y_train = load_mnist_labels('train-labels-idx1-ubyte.gz')
-    X_test = load_mnist_images('t10k-images-idx3-ubyte.gz')
+    x_test = load_mnist_images('t10k-images-idx3-ubyte.gz')
     y_test = load_mnist_labels('t10k-labels-idx1-ubyte.gz')
 
     y_train, y_test = vec_to_onehot(y_train), vec_to_onehot(y_test)
-    X_train, y_train, X_val, y_val = get_val_set(X_train, y_train, val_size)
+    x_train, y_train, x_val, y_val = get_val_set(x_train, y_train, val_size)
 
-    return X_train, y_train, X_val, y_val, X_test, y_test
+    return x_train, y_train, x_val, y_val, x_test, y_test
 
 
 class TextData():
@@ -84,18 +85,18 @@ class TextData():
         for i in range(0, len(text) - self.maxlen, self.stride):
             sentences.append(text[i: i + self.maxlen])
             next_chars.append(text[i + self.maxlen])
-        X_train = np.zeros((len(sentences), self.maxlen, len(chars)),
+        x_train = np.zeros((len(sentences), self.maxlen, len(chars)),
                            dtype=np.bool)
         y_train = np.zeros((len(sentences), len(chars)), dtype=np.bool)
         for i, sentence in enumerate(sentences):
             for t, char in enumerate(sentence):
-                X_train[i, t, char_to_index[char]] = 1
+                x_train[i, t, char_to_index[char]] = 1
             y_train[i, char_to_index[next_chars[i]]] = 1
         self.char_to_index = char_to_index
         self.index_to_char = index_to_char
         self.text = text
         self.chars = chars
-        return X_train, y_train
+        return x_train, y_train
 
     def sample(self, a, temperature=1.0):
         a = np.log(a) / temperature
@@ -112,10 +113,10 @@ class TextData():
             print('Seed: "{}"'.format(sentence))
             sys.stdout.write(generated)
             for i in range(num_chars):
-                X = np.zeros((1, self.maxlen, len(self.chars)))
+                x = np.zeros((1, self.maxlen, len(self.chars)))
                 for t, char in enumerate(sentence):
-                    X[0, t, self.char_to_index[char]] = 1
-                preds = model.predict(X)[0]
+                    x[0, t, self.char_to_index[char]] = 1
+                preds = model.predict(x)[0]
                 try:
                     next_index = self.sample(preds, diversity)
                     next_char = self.index_to_char[next_index]
@@ -152,22 +153,22 @@ def load_cifar10(val_size=10000):
 
     num_train_examples = 50000
 
-    X_train = np.zeros((num_train_examples, 3, 32, 32), dtype="uint8")
+    x_train = np.zeros((num_train_examples, 3, 32, 32), dtype="uint8")
     y_train = np.zeros((num_train_examples,), dtype="uint8")
 
     for i in range(1, 6):
         filepath = os.path.join(path, 'data_batch_' + str(i))
         data, labels = load_batch(filepath)
-        X_train[(i-1)*10000:i*10000, :, :, :] = data
+        x_train[(i-1)*10000:i*10000, :, :, :] = data
         y_train[(i-1)*10000:i*10000] = labels
 
     filepath = os.path.join(path, 'test_batch')
-    X_test, y_test = load_batch(filepath)
+    x_test, y_test = load_batch(filepath)
 
     y_train = np.reshape(y_train, (len(y_train), 1))
     y_test = np.reshape(y_test, (len(y_test), 1))
 
     y_train, y_test = vec_to_onehot(y_train), vec_to_onehot(y_test)
-    X_train, y_train, X_val, y_val = get_val_set(X_train, y_train, val_size)
+    x_train, y_train, x_val, y_val = get_val_set(x_train, y_train, val_size)
 
-    return X_train, y_train, X_val, y_val, X_test, y_test
+    return x_train, y_train, x_val, y_val, x_test, y_test
